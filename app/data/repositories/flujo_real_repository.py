@@ -40,6 +40,7 @@ class FlujoRealRepository:
         query = """
         SELECT 
             S5.FECHA,
+            S5.COD_COMP,
             S5.N_COMP,
             S5.D_H,
             S5.MONTO,

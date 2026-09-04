@@ -119,8 +119,12 @@ class FlujoRealView(ft.Container):
             if pd.isna(razon_social):
                 razon_social = "-"
                 
+            t_comp = row.get('COD_COMP', '')
+            t_comp_str = str(t_comp) if pd.notna(t_comp) else ""
+            
             rows.append(ft.DataRow(cells=[
                 ft.DataCell(ft.Text(fecha_str)),
+                ft.DataCell(ft.Text(t_comp_str)),
                 ft.DataCell(ft.Text(str(row['N_COMP']))),
                 ft.DataCell(ft.Text(str(razon_social))),
                 ft.DataCell(ft.Text(f"${monto:,.2f}"))
@@ -132,7 +136,8 @@ class FlujoRealView(ft.Container):
                 ft.DataTable(
                     columns=[
                         ft.DataColumn(ft.Text("Fecha")),
-                        ft.DataColumn(ft.Text("Comprobante")),
+                        ft.DataColumn(ft.Text("Tipo Comp.")),
+                        ft.DataColumn(ft.Text("Nº Comprobante")),
                         ft.DataColumn(ft.Text("Razón Social")),
                         ft.DataColumn(ft.Text("Importe ($)"), numeric=True)
                     ],

@@ -33,6 +33,8 @@ class ProyeccionChequesView(ft.Container):
         
         self.btn_generar = ft.ElevatedButton("Generar Proyección", on_click=self.actualizar_datos, icon=ft.icons.PLAY_ARROW)
         self.btn_limpiar = ft.OutlinedButton("Limpiar", on_click=self.limpiar_datos, icon=ft.icons.CLEAR)
+        self.btn_exportar = ft.FilledTonalButton("Exportar a Excel", on_click=self.iniciar_exportacion, icon=ft.icons.DOWNLOAD, disabled=True)
+        self.file_picker = ft.FilePicker(on_result=self.finalizar_exportacion)
         
         # Tabs para elegir Semana / Mes
         self.tabs = ft.Tabs(
@@ -64,7 +66,7 @@ class ProyeccionChequesView(ft.Container):
             ft.Row([
                 self.fecha_desde, self.btn_cal_desde,
                 self.fecha_hasta, self.btn_cal_hasta, 
-                self.btn_generar, self.btn_limpiar
+                self.btn_generar, self.btn_limpiar, self.btn_exportar
             ], alignment=ft.MainAxisAlignment.START, vertical_alignment=ft.CrossAxisAlignment.CENTER),
             ft.Divider(),
             self.kpi_card,
@@ -80,6 +82,8 @@ class ProyeccionChequesView(ft.Container):
             self.page.overlay.append(self.date_picker_desde)
         if self.date_picker_hasta not in self.page.overlay:
             self.page.overlay.append(self.date_picker_hasta)
+        if self.file_picker not in self.page.overlay:
+            self.page.overlay.append(self.file_picker)
         self.page.update()
         
     def cambio_fecha(self, e, text_field):
@@ -94,6 +98,7 @@ class ProyeccionChequesView(ft.Container):
         self.chart_container.content = None
         self.data_table_container.content = ft.Text("Genera la proyección para ver el detalle.", color=ft.colors.GREY_500)
         self.dict_resultados = {}
+        self.btn_exportar.disabled = True
         self.update()
 
     def cambiar_modo(self, e):
@@ -117,6 +122,8 @@ class ProyeccionChequesView(ft.Container):
 
     def renderizar_resultados(self):
         if not self.dict_resultados:
+            self.btn_exportar.disabled = True
+            self.update()
             return
             
         df_detalle = self.dict_resultados.get('detalle', pd.DataFrame())
@@ -125,9 +132,12 @@ class ProyeccionChequesView(ft.Container):
             self.txt_total_cartera.value = "$ 0.00"
             self.chart_container.content = ft.Text("No se encontraron cheques en este rango de fechas.")
             self.data_table_container.content = ft.Text("")
+            self.btn_exportar.disabled = True
             self.update()
             return
             
+        self.btn_exportar.disabled = False
+        
         total_importe = df_detalle['Importe'].sum()
         self.txt_total_cartera.value = f"${total_importe:,.2f}"
         
@@ -252,3 +262,38 @@ class ProyeccionChequesView(ft.Container):
     def cerrar_dialog(self, dlg):
         dlg.open = False
         self.page.update()
+
+    def iniciar_exportacion(self, e):
+        self.file_picker.save_file(
+            dialog_title="Exportar a Excel",
+            file_name="cheques_en_cartera.xlsx",
+            allowed_extensions=["xlsx"]
+        )
+
+    def finalizar_exportacion(self, e: ft.FilePickerResultEvent):
+        if not e.path:
+            return
+            
+        df_detalle = self.dict_resultados.get('detalle', pd.DataFrame())
+        if df_detalle.empty:
+            return
+            
+        try:
+            df_export = df_detalle.copy()
+            df_export = df_export.sort_values(by='FechaCheque')
+            
+            # Convert timezone if needed, formatting dates
+            if pd.api.types.is_datetime64_any_dtype(df_export['FechaCheque']):
+                df_export['FechaCheque'] = df_export['FechaCheque'].dt.date
+                
+            df_export.to_excel(e.path, index=False)
+            
+            if self.page:
+                self.page.snack_bar = ft.SnackBar(ft.Text(f"Exportado exitosamente a {e.path}"))
+                self.page.snack_bar.open = True
+                self.page.update()
+        except Exception as ex:
+            if self.page:
+                self.page.snack_bar = ft.SnackBar(ft.Text(f"Error al exportar: {ex}"), bgcolor=ft.colors.RED)
+                self.page.snack_bar.open = True
+                self.page.update()
