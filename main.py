@@ -21,6 +21,11 @@ from app.domain.use_cases.get_ratio_ventas_use_case import GetRatioVentasUseCase
 from app.ui.views.ratio_ventas_view import RatioVentasView
 from app.ui.views.acerca_de_view import AcercaDeView
 
+from app.data.repositories.cheques_repository import ChequesRepository
+from app.domain.use_cases.get_proyeccion_cheques_use_case import GetProyeccionChequesUseCase
+from app.ui.views.proyeccion_cheques_view import ProyeccionChequesView
+
+
 # Lógica robusta para encontrar el archivo .env incluso estando compilado como .exe
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
@@ -63,9 +68,19 @@ def main(page: ft.Page):
         # Fallback de seguridad en caso de que no exista el .env
         CONNECTION_STRING = "Driver={SQL Server};Server=localhost;Database=SISAT_SOLUCIONES__SA;Trusted_Connection=yes;"
     
-    # NUEVO: Prueba de conexión al arrancar para mostrar el error exacto en pantalla
+    # Extraer base de datos actual para el dropdown
+    current_db = ""
+    for p in CONNECTION_STRING.split(';'):
+        if p.strip().lower().startswith('database='):
+            current_db = p.split('=')[1].strip()
+
+    # NUEVO: Prueba de conexión al arrancar y obtención de bases de datos
+    databases = []
     try:
         conn = pyodbc.connect(CONNECTION_STRING, timeout=5)
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sys.databases WHERE state = 0 AND name NOT IN ('master', 'tempdb', 'model', 'msdb')")
+        databases = [row[0] for row in cursor.fetchall()]
         conn.close()
     except Exception as ex:
         # Mostramos un cartel rojo gigante en la pantalla del usuario si falla la conexión
@@ -76,6 +91,9 @@ def main(page: ft.Page):
             action="OK"
         )
         page.snack_bar.open = True
+        
+    if current_db and current_db not in databases:
+        databases.append(current_db)
         
     repository_morosidad = MorosidadRepository(CONNECTION_STRING)
     ml_service = MorosidadService()
@@ -89,12 +107,52 @@ def main(page: ft.Page):
 
     repository_ventas = VentasRepository(CONNECTION_STRING)
     use_case_ventas = GetRatioVentasUseCase(repository_ventas)
+    
+    repository_cheques = ChequesRepository(CONNECTION_STRING)
+    use_case_cheques = GetProyeccionChequesUseCase(repository_cheques)
+    
+    def on_db_change(e):
+        new_db = e.control.value
+        parts = CONNECTION_STRING.split(';')
+        for i, p in enumerate(parts):
+            if p.strip().lower().startswith('database='):
+                parts[i] = f'Database={new_db}'
+        new_conn_str = ';'.join(parts)
+        
+        repository_morosidad.connection_string = new_conn_str
+        repository_cf.connection_string = new_conn_str
+        repository_flujo_real.connection_string = new_conn_str
+        repository_ventas.connection_string = new_conn_str
+        repository_cheques.connection_string = new_conn_str
+        
+        page.snack_bar = ft.SnackBar(
+            content=ft.Text(f"Base de datos cambiada a {new_db}. Genere el reporte nuevamente."), 
+            bgcolor=ft.colors.GREEN_700
+        )
+        page.snack_bar.open = True
+        page.update()
+
+    db_dropdown = ft.Dropdown(
+        options=[ft.dropdown.Option(db) for db in databases],
+        value=current_db,
+        width=250,
+        on_change=on_db_change,
+        dense=True,
+        text_size=14,
+        disabled=len(databases) <= 1
+    )
+    
+    # Agregar el dropdown al AppBar
+    page.appbar.actions.insert(0, db_dropdown)
+    page.appbar.actions.insert(1, ft.Container(width=20))
+
 
     # Vistas
     morosidad_view = MorosidadView(use_case_morosidad)
     cashflow_view = CashFlowView(use_case_cf)
     vista_flujo_real = FlujoRealView(use_case_flujo_real)
     vista_ventas = RatioVentasView(use_case_ventas)
+    vista_cheques = ProyeccionChequesView(use_case_cheques)
     vista_acerca_de = AcercaDeView()
 
     # Variables de estado
@@ -111,8 +169,8 @@ def main(page: ft.Page):
         nonlocal last_selected_index
         index = e.control.selected_index
         
-        # Ignorar clics en los títulos (índices 0, 3 y 6)
-        if index == 0 or index == 3 or index == 6:
+        # Ignorar clics en los títulos (índices 0, 4 y 7)
+        if index == 0 or index == 4 or index == 7:
             # Revertir selección al anterior
             e.control.selected_index = last_selected_index
             page.update()
@@ -124,11 +182,13 @@ def main(page: ft.Page):
             content_area.content = vista_flujo_real
         elif index == 2:
             content_area.content = vista_ventas
-        elif index == 4:
-            content_area.content = cashflow_view
+        elif index == 3:
+            content_area.content = vista_cheques
         elif index == 5:
+            content_area.content = cashflow_view
+        elif index == 6:
             content_area.content = morosidad_view
-        elif index == 7:
+        elif index == 8:
             content_area.content = vista_acerca_de
         page.update()
 
@@ -148,6 +208,9 @@ def main(page: ft.Page):
             ),
             ft.NavigationRailDestination(
                 icon=ft.icons.COMPARE_ARROWS, selected_icon=ft.icons.COMPARE_ARROWS_OUTLINED, label="Ratio Cobranzas"
+            ),
+            ft.NavigationRailDestination(
+                icon=ft.icons.ACCOUNT_BALANCE_WALLET, selected_icon=ft.icons.ACCOUNT_BALANCE_WALLET_OUTLINED, label="Cartera Cheques"
             ),
             ft.NavigationRailDestination(
                 icon=ft.icons.BATCH_PREDICTION, label="--- PREDICTIVOS ---"

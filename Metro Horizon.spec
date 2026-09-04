@@ -35,5 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    version='C:/Users/Mario/AppData/Local/Temp/65152244-a283-497e-a2e6-5d4a2e28dd9d',
+    version='C:/Users/Mario/AppData/Local/Temp/325869bf-2d16-4bdc-9a2d-42f087f5b220',
 )

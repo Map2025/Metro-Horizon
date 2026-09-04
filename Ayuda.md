@@ -3,12 +3,14 @@
 Bienvenido a **Metro Horizon**, la plataforma de Inteligencia de Negocios y Analítica Financiera diseñada para integrarse directamente con el sistema ERP Tango Software. Esta aplicación permite a los gerentes financieros y tesoreros visualizar el estado real de la liquidez, evaluar la eficiencia de cobranzas y predecir riesgos a futuro mediante Inteligencia Artificial.
 
 
-## 1. Configuración Inicial
+## 1. Configuración Inicial y Selección de Empresa (Base de Datos)
 
-Para que la aplicación funcione correctamente, asegúrese de tener configurado el archivo `.env` en la raíz del proyecto con la cadena de conexión a su base de datos de Tango Software.
+Para que la aplicación funcione correctamente, asegúrese de tener configurado el archivo `.env` en la raíz del proyecto con la cadena de conexión predeterminada a su servidor de Tango Software.
 
 Ejemplo de configuración en `.env`:
 `DB_CONNECTION_STRING="Driver={SQL Server};Server=SU_SERVIDOR;Database=SU_BASE_DE_DATOS;UID=usuario;PWD=contraseña;"`
+
+**Selector Dinámico:** La aplicación detectará automáticamente todas las bases de datos operativas en su servidor. Usted puede alternar entre distintas empresas y módulos directamente utilizando el menú desplegable (Dropdown) ubicado en la barra superior de la aplicación. Al cambiar de base de datos, recuerde presionar el botón "Generar..." del reporte que se encuentre visualizando para recargar los datos.
 
 
 ## 2. Módulos Analíticos
@@ -28,6 +30,14 @@ Permite evaluar la eficiencia del equipo de cobranzas y la salud financiera de l
 * **Características:**
   * Cruza el total facturado bruto (incluye IVA, Notas de Débito y Crédito) contra el total de ingresos recibidos (Recibos al Haber).
   * Genera un Ratio de Eficiencia mensual (%) que se pinta de verde, naranja o rojo según la salud de recaudo.
+
+### 2.3. Proyección Cartera de Cheques
+Permite visualizar los cheques de terceros en cartera y su respectiva fecha de cobro para proyectar ingresos de efectivo futuros.
+* **Cómo usarlo:** Seleccione el rango de fechas a proyectar en los calendarios (por defecto los próximos 90 días) y presione *"Generar Proyección"*. Puede alternar la vista entre Agrupado por Semana o Agrupado por Mes usando las pestañas.
+* **Características:**
+  * Muestra el volumen total proyectado en dinero dentro del periodo filtrado.
+  * Cuenta con un gráfico de barras interactivo que facilita la visualización de vencimientos pico.
+  * **Drill-Down:** Haga clic en cualquier fila de la tabla resumen (una semana o un mes) para abrir el detalle exacto. Verá cada cheque de ese periodo, incluyendo el número interno, número de cheque, el cliente y su respectiva razón social.
 
 
 ## 3. Módulos Predictivos
