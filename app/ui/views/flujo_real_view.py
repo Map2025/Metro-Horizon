@@ -151,8 +151,8 @@ class FlujoRealView(ft.Container):
 
     def actualizar_datos(self, e):
         try:
-            fd = datetime.datetime.strptime(self.fecha_desde.value, '%d/%m/%y').strftime('%Y-%m-%d')
-            fh = datetime.datetime.strptime(self.fecha_hasta.value, '%d/%m/%y').strftime('%Y-%m-%d')
+            fd = datetime.datetime.strptime(self.fecha_desde.value, '%d/%m/%y').strftime('%Y%m%d')
+            fh = datetime.datetime.strptime(self.fecha_hasta.value, '%d/%m/%y').strftime('%Y%m%d')
         except ValueError:
             return
             

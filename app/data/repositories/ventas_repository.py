@@ -22,7 +22,8 @@ class VentasRepository:
             with pyodbc.connect(self.connection_string) as conn:
                 return pd.read_sql(query, conn, params=[fecha_desde, fecha_hasta])
         except Exception as e:
-            print(f"Error en get_ventas_mensuales: {e}")
+            with open('error.log', 'a') as f_err:
+                f_err.write(f"Error en get_ventas_mensuales: {e}")
             return pd.DataFrame()
 
     def get_cobranzas_mensuales(self, fecha_desde: str, fecha_hasta: str) -> pd.DataFrame:
@@ -44,5 +45,6 @@ class VentasRepository:
             with pyodbc.connect(self.connection_string) as conn:
                 return pd.read_sql(query, conn, params=[fecha_desde, fecha_hasta])
         except Exception as e:
-            print(f"Error en get_cobranzas_mensuales: {e}")
+            with open('error.log', 'a') as f_err:
+                f_err.write(f"Error en get_cobranzas_mensuales: {e}")
             return pd.DataFrame()

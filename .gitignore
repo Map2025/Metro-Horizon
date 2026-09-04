@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+build/
+dist/
+.env
+.env_win
+*.exe
+*.log
+patch_*.py

@@ -27,7 +27,8 @@ class FlujoRealRepository:
                 val = float(df['SaldoInicial'].iloc[0]) if not df.empty and pd.notna(df['SaldoInicial'].iloc[0]) else 0.0
                 return val
         except Exception as e:
-            print(f"Error getting saldo inicial: {e}")
+            with open('error.log', 'a') as f_err:
+                f_err.write(f"Error getting saldo inicial: {e}")
             return 0.0
 
     def get_movimientos_tesoreria(self, fecha_desde: str, fecha_hasta: str) -> pd.DataFrame:
@@ -56,5 +57,6 @@ class FlujoRealRepository:
             with pyodbc.connect(self.connection_string) as conn:
                 return pd.read_sql(query, conn, params=[fecha_desde, fecha_hasta])
         except Exception as e:
-            print(f"Error getting movimientos: {e}")
+            with open('error.log', 'a') as f_err:
+                f_err.write(f"Error getting movimientos: {e}")
             return pd.DataFrame(columns=['FECHA', 'N_COMP', 'D_H', 'MONTO', 'COD_CTA', 'DESCRIPCIO'])

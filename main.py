@@ -1,5 +1,7 @@
 import flet as ft
 import os
+import sys
+import pyodbc
 from dotenv import load_dotenv
 from app.data.repositories.morosidad_repository import MorosidadRepository
 from app.ml.services.morosidad_service import MorosidadService
@@ -17,9 +19,16 @@ from app.ui.views.flujo_real_view import FlujoRealView
 from app.data.repositories.ventas_repository import VentasRepository
 from app.domain.use_cases.get_ratio_ventas_use_case import GetRatioVentasUseCase
 from app.ui.views.ratio_ventas_view import RatioVentasView
+from app.ui.views.acerca_de_view import AcercaDeView
 
-# Cargar variables de entorno desde el archivo .env
-load_dotenv()
+# Lógica robusta para encontrar el archivo .env incluso estando compilado como .exe
+if getattr(sys, 'frozen', False):
+    application_path = os.path.dirname(sys.executable)
+else:
+    application_path = os.path.dirname(os.path.abspath(__file__))
+
+env_path = os.path.join(application_path, '.env')
+load_dotenv(dotenv_path=env_path)
 
 def main(page: ft.Page):
     page.title = "Metro Horizon"
@@ -53,6 +62,20 @@ def main(page: ft.Page):
     if not CONNECTION_STRING:
         # Fallback de seguridad en caso de que no exista el .env
         CONNECTION_STRING = "Driver={SQL Server};Server=localhost;Database=SISAT_SOLUCIONES__SA;Trusted_Connection=yes;"
+    
+    # NUEVO: Prueba de conexión al arrancar para mostrar el error exacto en pantalla
+    try:
+        conn = pyodbc.connect(CONNECTION_STRING, timeout=5)
+        conn.close()
+    except Exception as ex:
+        # Mostramos un cartel rojo gigante en la pantalla del usuario si falla la conexión
+        page.snack_bar = ft.SnackBar(
+            content=ft.Text(f"ERROR DE CONEXIÓN A BASE DE DATOS:\n{str(ex)}"),
+            bgcolor=ft.colors.RED_900,
+            duration=15000,
+            action="OK"
+        )
+        page.snack_bar.open = True
         
     repository_morosidad = MorosidadRepository(CONNECTION_STRING)
     ml_service = MorosidadService()
@@ -72,6 +95,7 @@ def main(page: ft.Page):
     cashflow_view = CashFlowView(use_case_cf)
     vista_flujo_real = FlujoRealView(use_case_flujo_real)
     vista_ventas = RatioVentasView(use_case_ventas)
+    vista_acerca_de = AcercaDeView()
 
     # Variables de estado
     last_selected_index = 1
@@ -87,8 +111,8 @@ def main(page: ft.Page):
         nonlocal last_selected_index
         index = e.control.selected_index
         
-        # Ignorar clics en los títulos (índices 0 y 3)
-        if index == 0 or index == 3:
+        # Ignorar clics en los títulos (índices 0, 3 y 6)
+        if index == 0 or index == 3 or index == 6:
             # Revertir selección al anterior
             e.control.selected_index = last_selected_index
             page.update()
@@ -104,6 +128,8 @@ def main(page: ft.Page):
             content_area.content = cashflow_view
         elif index == 5:
             content_area.content = morosidad_view
+        elif index == 7:
+            content_area.content = vista_acerca_de
         page.update()
 
     # Menú lateral
@@ -131,6 +157,12 @@ def main(page: ft.Page):
             ),
             ft.NavigationRailDestination(
                 icon=ft.icons.WARNING, selected_icon=ft.icons.WARNING_OUTLINED, label="Riesgo Morosidad"
+            ),
+            ft.NavigationRailDestination(
+                icon=ft.icons.INFO, label="--- SISTEMA ---"
+            ),
+            ft.NavigationRailDestination(
+                icon=ft.icons.HELP_OUTLINE, selected_icon=ft.icons.HELP, label="Acerca de"
             ),
         ],
         on_change=on_nav_change,
