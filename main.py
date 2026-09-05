@@ -25,6 +25,10 @@ from app.data.repositories.cheques_repository import ChequesRepository
 from app.domain.use_cases.get_proyeccion_cheques_use_case import GetProyeccionChequesUseCase
 from app.ui.views.proyeccion_cheques_view import ProyeccionChequesView
 
+from app.data.repositories.ciclo_cheques_repository import CicloChequesRepository
+from app.domain.use_cases.ciclo_cheques_service import ChequeAnalyticsService
+from app.ui.views.ciclo_cheques_view import CicloChequesView
+
 
 # Lógica robusta para encontrar el archivo .env incluso estando compilado como .exe
 if getattr(sys, 'frozen', False):
@@ -110,6 +114,9 @@ def main(page: ft.Page):
     
     repository_cheques = ChequesRepository(CONNECTION_STRING)
     use_case_cheques = GetProyeccionChequesUseCase(repository_cheques)
+
+    repository_ciclo_cheques = CicloChequesRepository(CONNECTION_STRING)
+    use_case_ciclo_cheques = ChequeAnalyticsService(repository_ciclo_cheques)
     
     def on_db_change(e):
         new_db = e.control.value
@@ -124,6 +131,7 @@ def main(page: ft.Page):
         repository_flujo_real.connection_string = new_conn_str
         repository_ventas.connection_string = new_conn_str
         repository_cheques.connection_string = new_conn_str
+        repository_ciclo_cheques.connection_string = new_conn_str
         
         page.snack_bar = ft.SnackBar(
             content=ft.Text(f"Base de datos cambiada a {new_db}. Genere el reporte nuevamente."), 
@@ -153,6 +161,7 @@ def main(page: ft.Page):
     vista_flujo_real = FlujoRealView(use_case_flujo_real)
     vista_ventas = RatioVentasView(use_case_ventas)
     vista_cheques = ProyeccionChequesView(use_case_cheques)
+    vista_ciclo_cheques = CicloChequesView(use_case_ciclo_cheques)
     vista_acerca_de = AcercaDeView()
 
     # Variables de estado
@@ -169,8 +178,8 @@ def main(page: ft.Page):
         nonlocal last_selected_index
         index = e.control.selected_index
         
-        # Ignorar clics en los títulos (índices 0, 4 y 7)
-        if index == 0 or index == 4 or index == 7:
+        # Ignorar clics en los títulos (índices 0, 5 y 8)
+        if index == 0 or index == 5 or index == 8:
             # Revertir selección al anterior
             e.control.selected_index = last_selected_index
             page.update()
@@ -184,11 +193,13 @@ def main(page: ft.Page):
             content_area.content = vista_ventas
         elif index == 3:
             content_area.content = vista_cheques
-        elif index == 5:
-            content_area.content = cashflow_view
+        elif index == 4:
+            content_area.content = vista_ciclo_cheques
         elif index == 6:
+            content_area.content = cashflow_view
+        elif index == 7:
             content_area.content = morosidad_view
-        elif index == 8:
+        elif index == 9:
             content_area.content = vista_acerca_de
         page.update()
 
@@ -211,6 +222,9 @@ def main(page: ft.Page):
             ),
             ft.NavigationRailDestination(
                 icon=ft.icons.ACCOUNT_BALANCE_WALLET, selected_icon=ft.icons.ACCOUNT_BALANCE_WALLET_OUTLINED, label="Cartera Cheques"
+            ),
+            ft.NavigationRailDestination(
+                icon=ft.icons.TIMELAPSE, selected_icon=ft.icons.TIMELAPSE_OUTLINED, label="Ciclo Cheques"
             ),
             ft.NavigationRailDestination(
                 icon=ft.icons.BATCH_PREDICTION, label="--- PREDICTIVOS ---"
